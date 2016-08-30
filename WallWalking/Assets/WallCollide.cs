@@ -7,7 +7,8 @@ public class WallCollide : MonoBehaviour {
 
 	public const int Walls = 1 << 8;
 	public const float Gravity = 3f;
-	public const float Radius = 2.5f;
+	public const float GroundedRadius = 3.0f;
+	public const float NormalRadius = 2.0f;
 
 	public bool Grounded { get; private set; }
 	public Vector3 Up { get; private set; }
@@ -18,12 +19,15 @@ public class WallCollide : MonoBehaviour {
 	}
 
 	void FixedUpdate() {
-		Collider[] hits = Physics.OverlapSphere(transform.position, Radius, Walls);
 		string o = "";
 		Vector3 Pos = rb.worldCenterOfMass;
 		Vector3 up = Vector3.zero;
+
+		// isGrounded?
+		Collider[] hits = Physics.OverlapSphere(Pos, GroundedRadius, Walls);
 		Grounded = hits.Length > 0;
 
+		hits = Physics.OverlapSphere(Pos, NormalRadius, Walls);
 		foreach (Collider hit in hits) {
 			Vector3 HitPos = hit.ClosestPointOnBounds (Pos);
 			float dist = Vector3.Distance (Pos, HitPos);
@@ -31,19 +35,29 @@ public class WallCollide : MonoBehaviour {
 
 			Vector3 v = Pos - HitPos;
 			v = v.normalized * (1f / v.magnitude);
-			Debug.DrawLine (HitPos, Pos, Color.green);
+			//Debug.DrawLine (HitPos, Pos, Color.green); // all connected walls
 
 			up += v;
 		}
-		Debug.Log (o);
+		//Debug.Log (o);
 
 		up.Normalize();
 		if (up != Vector3.zero) {
 			Up = Vector3.Slerp (Up, up, 3f * Time.fixedDeltaTime);
 		}
 
-		Debug.DrawLine (Pos, Pos + Up * 3f, Color.red);
-		Debug.DrawLine (Pos, Pos + transform.forward * 3f, Color.blue);
+		// prevent standing on head
+		if (hits.Length == 1) {
+			float angle = Vector3.Angle (Up, up);
+			//Debug.Log(angle);
+			if (angle > 120.0) {
+				rb.AddForceAtPosition (transform.right, transform.position + transform.up);
+			}
+		}
+
+		// Orientation
+		//Debug.DrawLine (Pos, Pos + Up * 3f, Color.red);
+		//Debug.DrawLine (Pos, Pos + transform.forward * 3f, Color.blue);
 
 		/*if (Grounded) {
 			// gravity
